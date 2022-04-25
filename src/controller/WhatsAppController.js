@@ -1,4 +1,7 @@
-class WhatsAppController {
+import { Format } from '../util/Format';
+import { CameraController } from './CameraController';
+
+export class WhatsAppController {
     constructor() {
         this.elementsPrototype();
         this.loadElements();
@@ -67,6 +70,7 @@ class WhatsAppController {
 
         }
 
+
         Element.prototype.addClass = function (name) {
 
             this.classList.add(name)
@@ -74,6 +78,7 @@ class WhatsAppController {
             return this;
 
         }
+
 
         Element.prototype.removeClass = function (name) {
 
@@ -166,6 +171,7 @@ class WhatsAppController {
 
         })
 
+
         this.el.inputNamePanelEditProfile.on('keypress', ev => {
 
             if (ev.key === "Enter") {
@@ -229,21 +235,217 @@ class WhatsAppController {
 
         this.el.btnAttachCamera.on('click', ev => {
 
-            console.log('camera');
+            this.closeAllMainPanel()
+            this.el.panelCamera.addClass('open');
+            this.el.panelCamera.css({ height: 'calc(100%)' })
+
+            this._camera = new CameraController(this.el.videoCamera);
+
+        })
+
+        this.el.btnClosePanelCamera.on('click', ev => {
+
+            this.closeAllMainPanel();
+            this.el.panelMessagesContainer.show();
+            this._camera.stop();
+
+        })
+
+        this.el.btnTakePicture.on('click', ev => {
+
+            let dataURL = this._camera.takePicture();
+
+            this.el.pictureCamera.src = dataURL;
+            this.el.pictureCamera.show();
+            this.el.btnReshootPanelCamera.show();
+            this.el.containerSendPicture.show();
+            this.el.videoCamera.hide();
+            this.el.containerTakePicture.hide();
+
+        })
+
+        this.el.btnReshootPanelCamera.on('click', ev => {
+
+            this.el.pictureCamera.hide();
+            this.el.btnReshootPanelCamera.hide();
+            this.el.containerSendPicture.hide();
+            this.el.videoCamera.show();
+            this.el.containerTakePicture.show();
+
+        })
+
+        this.el.btnSendPicture.on('click', ev => {
+
+            console.log(this.el.pictureCamera.src)
 
         })
 
         this.el.btnAttachDocument.on('click', ev => {
 
-            console.log('document');
+            this.closeAllMainPanel();
+            this.el.panelDocumentPreview.addClass('open');
+            this.el.panelDocumentPreview.css({ height: 'calc(100%)' })
+
+        })
+
+        this.el.btnClosePanelDocumentPreview.on('click', ev => {
+
+            this.closeAllMainPanel();
+            this.el.panelMessagesContainer.show()
+
+        })
+
+        this.el.btnSendDocument.on('click', ev => {
+
+            console.log('send document');
 
         })
 
         this.el.btnAttachContact.on('click', ev => {
 
-            console.log('contact');
+            this.el.modalContacts.show();
 
         })
+
+        this.el.btnCloseModalContacts.on('click', ev => {
+
+            this.el.modalContacts.hide();
+
+        })
+
+        this.el.btnSendMicrophone.on('click', ev => {
+
+            this.el.recordMicrophone.show();
+            this.el.btnSendMicrophone.hide();
+            this.startRecordMicrophoneTime();
+
+        })
+
+        this.el.btnCancelMicrophone.on('click', ev => {
+
+            this.closeRecordMicrophone();
+
+        })
+
+        this.el.btnFinishMicrophone.on('click', ev => {
+
+            this.closeRecordMicrophone();
+
+        })
+
+        this.el.inputText.on('keypress', ev => {
+
+            if (ev.key === 'Enter' && !ev.ctrlKey) {
+
+                ev.preventDefault();
+                this.el.btnSend.click();
+
+            }
+
+        })
+
+        this.el.inputText.on('keyup', ({ target }) => {
+
+            if (target.innerHTML.length) {
+
+                this.el.inputPlaceholder.hide();
+                this.el.btnSendMicrophone.hide();
+                this.el.btnSend.show();
+
+            } else {
+
+                this.el.inputPlaceholder.show();
+                this.el.btnSendMicrophone.show();
+                this.el.btnSend.hide();
+
+            }
+
+        })
+
+        this.el.btnSend.on('click', ev => {
+
+            console.log(this.el.inputText.innerHTML);
+
+        })
+
+        this.el.btnEmojis.on('click', ev => {
+
+            this.el.panelEmojis.toggleClass('open');
+
+        })
+
+        this.el.panelEmojis.querySelectorAll('.emojik').forEach(emoji => {
+
+            emoji.on('click', ev => {
+
+                let img = this.el.imgEmojiDefault.cloneNode();
+
+                img.style.cssText = emoji.style.cssText;
+                img.dataset.unicode = emoji.dataset.unicode;
+                img.alt = emoji.dataset.unicode;
+
+                emoji.classList.forEach(name => {
+                    img.addClass(name);
+                })
+
+                let cursor = window.getSelection();
+
+                if (!cursor.focusNode || !cursor.focusNode.id === "input-text") {
+
+                    this.el.inputText.focus();
+                    cursor = window.getSelection();
+
+                }
+
+                let range = document.createRange();
+
+                range = cursor.getRangeAt(0);
+                range.deleteContents();
+
+                let frag = document.createDocumentFragment();
+
+                frag.appendChild(img)
+
+                range.insertNode(frag);
+                range.setStartAfter(img);
+
+                this.el.inputText.dispatchEvent(new Event('keyup'));
+
+            })
+
+        })
+
+
+    }
+
+    startRecordMicrophoneTime() {
+
+        let start = Date.now();
+
+        this._recordMicrophoneInterval = setInterval(() => {
+
+            this.el.recordMicrophoneTimer.innerHTML = Format.toTime(Date.now() - start);
+
+        }, 100);
+
+    }
+
+    closeRecordMicrophone() {
+
+        this.el.recordMicrophone.hide();
+        this.el.btnSendMicrophone.show();
+        this.el.recordMicrophoneTimer.innerHTML = "";
+        clearInterval(this._recordMicrophoneInterval);
+
+    }
+
+    closeAllMainPanel() {
+
+        this.el.panelMessagesContainer.hide();
+        this.el.panelDocumentPreview.removeClass('open');
+        this.el.panelCamera.removeClass('open');
+
+
     }
 
     closeMenuAttach(ev) {
